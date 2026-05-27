@@ -1,0 +1,12 @@
+{
+  "id": "aareGuru",
+  "name": "aareGuru",
+  "description": "Displays live Aare river conditions in Bern — temperature, flow, and forecast.",
+  "version": "0.1.0",
+  "author": "Paul Haider",
+  "icon": "pool",
+  "type": "widget",
+  "component": "./MyWidget.qml",
+  "permissions": ["network"],
+  "requires_dms": ">=1.4.0"
+}
