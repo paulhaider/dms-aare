@@ -7,6 +7,9 @@ import qs.Modules.Plugins
 PluginComponent {
     id: root
 
+    property string city: pluginData.city ?? "bern"
+    onCityChanged: fetchAareData()
+
     property string temp: "--"
     property string flow: "--"
     property string location: "Aare"
@@ -18,7 +21,7 @@ PluginComponent {
 
     function fetchAareData() {
         var xhr = new XMLHttpRequest();
-        xhr.open("GET", "https://aareguru.existenz.ch/v2018/current?city=bern");
+        xhr.open("GET", "https://aareguru.existenz.ch/v2018/current?city=" + root.city);
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {

@@ -7,6 +7,7 @@
   "icon": "pool",
   "type": "widget",
   "component": "./MyWidget.qml",
-  "permissions": ["network"],
+  "settings": "./Settings.qml",
+  "permissions": ["network", "settings_read", "settings_write"],
   "requires_dms": ">=1.4.0"
 }
