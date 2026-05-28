@@ -9,6 +9,12 @@ PluginComponent {
 
     property string temp: "--"
     property string flow: "--"
+    property string location: "Aare"
+    property string tempText: "--"
+    property string tempTextShort: "--"
+    property string flowText: "--"
+    property string forecast2h: "--"
+    property string forecast2hText: "--"
 
     function fetchAareData() {
         var xhr = new XMLHttpRequest();
@@ -18,10 +24,15 @@ PluginComponent {
                 if (xhr.status === 200) {
                     try {
                         var res = JSON.parse(xhr.responseText);
-                        var t = res.aare && res.aare.temperature;
-                        var f = res.aare && res.aare.flow;
-                        root.temp = (t != null) ? t.toFixed(1) + "°C" : "Err";
-                        root.flow = (f != null) ? f.toFixed(1) + " m³/s" : "Err";
+                        var a = res.aare;
+                        root.location      = (a && a.location)            || "Aare";
+                        root.temp          = (a && a.temperature != null) ? a.temperature.toFixed(1) + "°C" : "Err";
+                        root.flow          = (a && a.flow != null)        ? String(a.flow) + " m³/s"       : "Err";
+                        root.tempText      = (a && a.temperature_text)      || "–";
+                        root.tempTextShort = (a && a.temperature_text_short) || "–";
+                        root.flowText      = (a && a.flow_text)             || "–";
+                        root.forecast2h    = (a && a.forecast2h != null)    ? a.forecast2h.toFixed(1) + "°C" : "–";
+                        root.forecast2hText = (a && a.forecast2h_text)      || "–";
                     } catch (e) {
                         root.temp = "Err";
                         root.flow = "Err";
@@ -41,6 +52,53 @@ PluginComponent {
         repeat: true
         triggeredOnStart: true
         onTriggered: root.fetchAareData()
+    }
+
+    popoutWidth: 360
+    popoutHeight: 210
+
+    popoutContent: Component {
+        Column {
+            spacing: Theme.spacingS
+            padding: Theme.spacingM
+
+            StyledText {
+                text: "Aare " + root.location
+                font.pixelSize: Theme.fontSizeMedium
+                font.weight: Font.Bold
+                color: Theme.surfaceText
+            }
+
+            StyledText {
+                text: root.temp + "  ·  " + root.flow
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.surfaceVariantText
+            }
+
+            StyledText {
+                text: root.tempText + " (" + root.tempTextShort + ")"
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.surfaceVariantText
+                wrapMode: Text.WordWrap
+                width: 320
+            }
+
+            StyledText {
+                text: "Fluss: " + root.flowText
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.surfaceVariantText
+                wrapMode: Text.WordWrap
+                width: 320
+            }
+
+            StyledText {
+                text: "In 2h: " + root.forecast2h + " – " + root.forecast2hText
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.surfaceVariantText
+                wrapMode: Text.WordWrap
+                width: 320
+            }
+        }
     }
 
     horizontalBarPill: Component {
