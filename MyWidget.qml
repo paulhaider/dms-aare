@@ -14,12 +14,14 @@ PluginComponent {
     property string flow: "--"
     property string location: "Aare"
     property string tempText: "--"
-    property string tempTextShort: "--"
     property string flowText: "--"
     property string forecast2h: "--"
     property string forecast2hText: "--"
     property var tempHistory: []
     property var flowHistory: []
+    property bool flowWarning: false
+    property string bueberStatus: "--"
+    property var sunLocations: []
 
     function fetchAareData() {
         var xhr = new XMLHttpRequest();
@@ -34,7 +36,6 @@ PluginComponent {
                         root.temp          = (a && a.temperature != null) ? a.temperature.toFixed(1) + "°C" : "Err";
                         root.flow          = (a && a.flow != null)        ? String(a.flow) + " m³/s"       : "Err";
                         root.tempText      = (a && a.temperature_text)      || "–";
-                        root.tempTextShort = (a && a.temperature_text_short) || "–";
                         root.flowText      = (a && a.flow_text)             || "–";
                         root.forecast2h    = (a && a.forecast2h != null)    ? a.forecast2h.toFixed(1) + "°C" : "–";
                         root.forecast2hText = (a && a.forecast2h_text)      || "–";
@@ -46,6 +47,17 @@ PluginComponent {
                         }
                         root.tempHistory = temps;
                         root.flowHistory = flows;
+                        root.flowWarning = !!(a && a.flow != null && a.flow_scale_threshold != null && a.flow >= a.flow_scale_threshold);
+                        var bueber = res.bueber;
+                        root.bueberStatus = bueber ? (bueber.state_open_flag ? "offen" : "zu") : "–";
+                        var rawLocs = (res.sun && res.sun.sunlocations) ? res.sun.sunlocations : [];
+                        var locs = [];
+                        for (var k = 0; k < rawLocs.length; k++) {
+                            var tl = rawLocs[k].timeleft;
+                            var tlStr = tl > 0 ? (Math.floor(tl / 3600) + "h " + String(Math.floor((tl % 3600) / 60)).padStart(2, "0") + "min") : "—";
+                            locs.push({ name: rawLocs[k].name, sunset: rawLocs[k].sunsetlocal, timeleftStr: tlStr });
+                        }
+                        root.sunLocations = locs;
                     } catch (e) {
                         root.temp = "Err";
                         root.flow = "Err";
@@ -68,7 +80,7 @@ PluginComponent {
     }
 
     popoutWidth: 400
-    popoutHeight: 460
+    popoutHeight: 600
 
     popoutContent: Component {
         Column {
@@ -83,13 +95,7 @@ PluginComponent {
             }
 
             StyledText {
-                text: root.temp + "  ·  " + root.flow
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.surfaceVariantText
-            }
-
-            StyledText {
-                text: root.tempText + " (" + root.tempTextShort + ")"
+                text: root.temp + "  ·  " + root.tempText
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
                 wrapMode: Text.WordWrap
@@ -97,7 +103,15 @@ PluginComponent {
             }
 
             StyledText {
-                text: "Fluss: " + root.flowText
+                text: root.flow + "  ·  " + root.flowText
+                font.pixelSize: Theme.fontSizeSmall
+                color: root.flowWarning ? "#e57c34" : Theme.surfaceVariantText
+                wrapMode: Text.WordWrap
+                width: 360
+            }
+
+            StyledText {
+                text: "In 2h: " + root.forecast2h + "  ·  " + root.forecast2hText
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
                 wrapMode: Text.WordWrap
@@ -105,15 +119,23 @@ PluginComponent {
             }
 
             StyledText {
-                text: "In 2h: " + root.forecast2h + " – " + root.forecast2hText
+                text: "Schwimmkanal: " + root.bueberStatus
                 font.pixelSize: Theme.fontSizeSmall
-                color: Theme.surfaceVariantText
-                wrapMode: Text.WordWrap
-                width: 360
+                color: root.bueberStatus === "offen" ? "#6abf69" : Theme.surfaceVariantText
+            }
+
+            Repeater {
+                model: root.sunLocations
+                StyledText {
+                    required property var modelData
+                    text: modelData.name + ": bis " + modelData.sunset + (modelData.timeleftStr !== "—" ? "  ·  noch " + modelData.timeleftStr : "  ·  vorbei")
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.surfaceVariantText
+                }
             }
 
             StyledText {
-                text: "Wassertemperatur (48h)"
+                text: "Wassertemperatur (letzte 48h)"
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
             }
@@ -173,7 +195,7 @@ PluginComponent {
             }
 
             StyledText {
-                text: "Abfluss (48h)"
+                text: "Abfluss (letzte 48h)"
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
             }
@@ -236,7 +258,6 @@ PluginComponent {
             DankIcon {
                 name: "pool"
                 size: root.iconSize
-                color: Theme.primary
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -264,7 +285,6 @@ PluginComponent {
             DankIcon {
                 name: "pool"
                 size: root.iconSize
-                color: Theme.primary
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
