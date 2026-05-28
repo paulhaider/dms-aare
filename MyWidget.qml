@@ -18,6 +18,8 @@ PluginComponent {
     property string flowText: "--"
     property string forecast2h: "--"
     property string forecast2hText: "--"
+    property var tempHistory: []
+    property var flowHistory: []
 
     function fetchAareData() {
         var xhr = new XMLHttpRequest();
@@ -36,6 +38,14 @@ PluginComponent {
                         root.flowText      = (a && a.flow_text)             || "–";
                         root.forecast2h    = (a && a.forecast2h != null)    ? a.forecast2h.toFixed(1) + "°C" : "–";
                         root.forecast2hText = (a && a.forecast2h_text)      || "–";
+                        var past = res.aarepast || [];
+                        var temps = [], flows = [];
+                        for (var i = 0; i < past.length; i++) {
+                            temps.push(past[i].temperature !== null && past[i].temperature !== undefined ? past[i].temperature : null);
+                            flows.push(past[i].flow);
+                        }
+                        root.tempHistory = temps;
+                        root.flowHistory = flows;
                     } catch (e) {
                         root.temp = "Err";
                         root.flow = "Err";
@@ -57,8 +67,8 @@ PluginComponent {
         onTriggered: root.fetchAareData()
     }
 
-    popoutWidth: 360
-    popoutHeight: 210
+    popoutWidth: 400
+    popoutHeight: 460
 
     popoutContent: Component {
         Column {
@@ -83,7 +93,7 @@ PluginComponent {
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
                 wrapMode: Text.WordWrap
-                width: 320
+                width: 360
             }
 
             StyledText {
@@ -91,7 +101,7 @@ PluginComponent {
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
                 wrapMode: Text.WordWrap
-                width: 320
+                width: 360
             }
 
             StyledText {
@@ -99,7 +109,122 @@ PluginComponent {
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
                 wrapMode: Text.WordWrap
-                width: 320
+                width: 360
+            }
+
+            StyledText {
+                text: "Wassertemperatur (48h)"
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.surfaceVariantText
+            }
+
+            Canvas {
+                id: tempCanvas
+                width: 360
+                height: 70
+
+                onPaint: {
+                    var ctx = getContext("2d");
+                    ctx.clearRect(0, 0, width, height);
+                    var data = root.tempHistory;
+                    if (!data || data.length < 2) return;
+                    var minV = null, maxV = null;
+                    for (var i = 0; i < data.length; i++) {
+                        if (data[i] === null) continue;
+                        if (minV === null || data[i] < minV) minV = data[i];
+                        if (maxV === null || data[i] > maxV) maxV = data[i];
+                    }
+                    if (minV === null) return;
+                    var range = (maxV - minV) || 1;
+                    var margin = 38;
+                    var plotW = width - margin;
+                    var plotH = height - 4;
+                    ctx.font = "10px sans-serif";
+                    ctx.fillStyle = Theme.surfaceVariantText;
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "top";
+                    ctx.fillText(maxV.toFixed(1) + "°", margin - 4, 2);
+                    ctx.textBaseline = "bottom";
+                    ctx.fillText(minV.toFixed(1) + "°", margin - 4, height - 2);
+                    ctx.strokeStyle = Theme.surfaceVariantText;
+                    ctx.lineWidth = 0.5;
+                    ctx.beginPath();
+                    ctx.moveTo(margin, 0);
+                    ctx.lineTo(margin, height);
+                    ctx.stroke();
+                    ctx.strokeStyle = Theme.primary;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    var needsMove = true;
+                    for (var j = 0; j < data.length; j++) {
+                        if (data[j] === null) { needsMove = true; continue; }
+                        var x = margin + (j / (data.length - 1)) * plotW;
+                        var y = height - 2 - ((data[j] - minV) / range) * plotH;
+                        if (needsMove) { ctx.moveTo(x, y); needsMove = false; }
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                }
+
+                Connections {
+                    target: root
+                    function onTempHistoryChanged() { tempCanvas.requestPaint(); }
+                }
+            }
+
+            StyledText {
+                text: "Abfluss (48h)"
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.surfaceVariantText
+            }
+
+            Canvas {
+                id: flowCanvas
+                width: 360
+                height: 70
+
+                onPaint: {
+                    var ctx = getContext("2d");
+                    ctx.clearRect(0, 0, width, height);
+                    var data = root.flowHistory;
+                    if (!data || data.length < 2) return;
+                    var minV = data[0], maxV = data[0];
+                    for (var i = 1; i < data.length; i++) {
+                        if (data[i] < minV) minV = data[i];
+                        if (data[i] > maxV) maxV = data[i];
+                    }
+                    var range = (maxV - minV) || 1;
+                    var margin = 38;
+                    var plotW = width - margin;
+                    var plotH = height - 4;
+                    ctx.font = "10px sans-serif";
+                    ctx.fillStyle = Theme.surfaceVariantText;
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "top";
+                    ctx.fillText(maxV + " m³", margin - 4, 2);
+                    ctx.textBaseline = "bottom";
+                    ctx.fillText(minV + " m³", margin - 4, height - 2);
+                    ctx.strokeStyle = Theme.surfaceVariantText;
+                    ctx.lineWidth = 0.5;
+                    ctx.beginPath();
+                    ctx.moveTo(margin, 0);
+                    ctx.lineTo(margin, height);
+                    ctx.stroke();
+                    ctx.strokeStyle = Theme.primary;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    for (var j = 0; j < data.length; j++) {
+                        var x = margin + (j / (data.length - 1)) * plotW;
+                        var y = height - 2 - ((data[j] - minV) / range) * plotH;
+                        if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                }
+
+                Connections {
+                    target: root
+                    function onFlowHistoryChanged() { flowCanvas.requestPaint(); }
+                }
             }
         }
     }
