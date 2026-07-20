@@ -215,7 +215,13 @@ PluginComponent {
                         if (data[i] < minV) minV = data[i];
                         if (data[i] > maxV) maxV = data[i];
                     }
-                    var range = (maxV - minV) || 1;
+                    var range = maxV - minV;
+                    if (range < 10) {
+                        var pad = (10 - range) / 2;
+                        minV -= pad;
+                        maxV += pad;
+                        range = 10;
+                    }
                     var margin = 38;
                     var plotW = width - margin;
                     var plotH = height - 4;
@@ -223,9 +229,9 @@ PluginComponent {
                     ctx.fillStyle = Theme.surfaceVariantText;
                     ctx.textAlign = "right";
                     ctx.textBaseline = "top";
-                    ctx.fillText(maxV + " m³", margin - 4, 2);
+                    ctx.fillText(Math.round(maxV) + " m³", margin - 4, 2);
                     ctx.textBaseline = "bottom";
-                    ctx.fillText(minV + " m³", margin - 4, height - 2);
+                    ctx.fillText(Math.round(minV) + " m³", margin - 4, height - 2);
                     ctx.strokeStyle = Theme.surfaceVariantText;
                     ctx.lineWidth = 0.5;
                     ctx.beginPath();
@@ -264,7 +270,6 @@ PluginComponent {
             StyledText {
                 text: root.temp
                 font.pixelSize: Theme.fontSizeMedium
-                font.weight: Font.Bold
                 color: Theme.surfaceText
                 anchors.verticalCenter: parent.verticalCenter
             }
@@ -291,7 +296,6 @@ PluginComponent {
             StyledText {
                 text: root.temp
                 font.pixelSize: Theme.fontSizeSmall
-                font.weight: Font.Bold
                 color: Theme.surfaceText
                 anchors.horizontalCenter: parent.horizontalCenter
             }
